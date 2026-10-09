@@ -57,7 +57,8 @@
 |   |   |   |
 |:---:|:---:|:---:|
 | [🚀 **快速开始**](#-快速开始) | [AI 智能分析](#-ai-智能分析) | [⚙️ **配置详解**](#配置详解) |
-| [Docker部署](#6-docker-部署) | [MCP客户端](#-mcp-客户端) | [📝 **更新日志**](#-更新日志) |
+| [Docker部署](#6-docker-部署) | [🖥️ **管理平台**](#️-管理平台web-ui) | [MCP客户端](#-mcp-客户端) |
+| [📝 **更新日志**](#-更新日志) | | |
 | [🎯 **核心功能**](#-核心功能) | [☕ **支持项目**](#-支持项目) | [📚 **项目相关**](#-项目相关) |
 
 </div>
@@ -3470,6 +3471,43 @@ Cherry Studio 提供 GUI 配置界面，5 分钟快速部署，复杂的部分�
 <img src="/_image/ai4.png" alt="mcp 使用效果图" width="600">
 
 <br>
+
+## 🖥️ 管理平台（Web UI）
+
+> v1.0 新增 · 完整文档见 [docs/deploy-web.md](docs/deploy-web.md) · UI 设计稿见 [docs/design/](docs/design/)
+
+TrendRadar 管理平台为引擎提供可视化界面：配置管理、运行监控、报告中心、数据浏览一站式完成，与 MCP Server 共享同一份数据与配置。
+
+**功能总览**：
+
+| 模块 | 能力 |
+|---|---|
+| 仪表盘 | 今日任务/成功率/数据用量/下次运行 + 热榜速览（15s 自动刷新） |
+| 配置管理 | 五大面板：数据源（平台开关/RSS 增删改）· 调度（频率/报告模式）· 筛选与展示（keyword/AI 双模式/词表/兴趣编辑器）· **AI 与通知**（6 提供商预设·模型联想·全参数·备用模型链·连通性测试·9 渠道凭据）· 版本历史（**diff 对比/一键回滚/审计链**） |
+| 运行监控 | 任务历史/送达统计 + **WebSocket 实时日志终端**（LIVE）+ 数据源健康热力图 |
+| 报告中心 | 历史报告索引 + 在线预览 + 推送记录 |
+| 数据浏览 | 热榜检索（分页）+ 趋势分析（关键词热度矩阵/平台对比/**关键词共现与异动信号——与 MCP 27 工具同源**） |
+| 系统设置 | 账户改密 · 存储状态 · 版本信息 · 审计日志 · **MCP 接入 JSON 一键复制（含 API Key 鉴权）** |
+
+**Docker 一键部署**（与 MCP 容器组合）：
+
+```bash
+cd docker
+docker compose -f docker-compose-web.yml --env-file .env up -d --build
+# 浏览器访问 http://127.0.0.1:8080 · 默认账号 admin / WEB_ADMIN_PASSWORD（默认 trendradar）
+```
+
+**本地开发**：
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-web.txt -e .
+.venv/bin/python -m uvicorn webapp.main:app --port 8080      # 后端
+cd frontend && npm install && npm run dev                     # 前端 http://localhost:5173
+```
+
+**接入任意 OpenAI 兼容模型**（如智谱 GLM）：提供商选「OpenAI 兼容端点」→ 模型 `openai/glm-4.6` → API Base `https://open.bigmodel.cn/api/paas/v4` → 填 Key 点「测试连接」（无需保存即可测）。硅基流动/月之暗面/本地 vLLM 同理。
+
+> ⚠️ 平台内置调度取代 supercronic，请勿与原 `docker-compose.yml` 的爬虫容器同时启用（防日库双写）；配置保存后投影器双写共享卷，MCP 与 CLI 始终读到最新配置。
 
 ## 🔌 MCP 客户端
 

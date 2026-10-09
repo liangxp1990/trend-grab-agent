@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrendRadar 系统架构文档</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --code-bg: #f1f5f9;
+    --accent-green: #059669;
+    --accent-purple: #7c3aed;
+    --accent-orange: #d97706;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.7;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* 顶部横幅 */
+  header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
+    color: #fff; padding: 48px 24px 40px; margin-bottom: 40px;
+  }
+  header .inner { max-width: 1200px; margin: 0 auto; }
+  header h1 { font-size: 30px; font-weight: 700; letter-spacing: 1px; }
+  header .subtitle { margin-top: 8px; font-size: 15px; opacity: .85; }
+  header .meta { margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap; }
+  header .meta span {
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+    padding: 4px 14px; border-radius: 999px; font-size: 13px;
+  }
+
+  /* 目录 */
+  nav.toc {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 40px;
+  }
+  nav.toc h2 { font-size: 15px; color: var(--text-light); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+  nav.toc ol { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 24px; }
+  nav.toc a { color: var(--primary); text-decoration: none; font-size: 14px; }
+  nav.toc a:hover { text-decoration: underline; }
+
+  /* 章节 */
+  section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 32px 36px; margin-bottom: 32px; }
+  h2.sec { font-size: 22px; color: var(--primary-dark); border-left: 4px solid var(--primary); padding-left: 12px; margin-bottom: 20px; }
+  h3 { font-size: 17px; margin: 26px 0 12px; color: var(--text); }
+  h3:first-of-type { margin-top: 4px; }
+  p { margin: 10px 0; font-size: 14.5px; }
+  ul, ol { margin: 10px 0 10px 22px; font-size: 14.5px; }
+  li { margin: 5px 0; }
+  strong { color: var(--primary-dark); }
+  code {
+    font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 13px;
+    color: #0f172a;
+  }
+  .file { white-space: nowrap; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; }
+  th { background: #eff6ff; color: var(--primary-dark); text-align: left; font-weight: 600; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafcff; }
+  td code { white-space: nowrap; }
+
+  .figure { margin: 24px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #fff; }
+  .figure figcaption {
+    padding: 10px 16px; background: #f8fafc; border-top: 1px solid var(--border);
+    font-size: 13px; color: var(--text-light); text-align: center;
+  }
+  .figure .svg-wrap { padding: 12px; overflow-x: auto; }
+  svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+  svg text { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  svg .mono { font-family: "SF Mono", Consolas, monospace; }
+
+  .callout {
+    border-left: 4px solid var(--accent-orange); background: #fffbeb;
+    border-radius: 6px; padding: 12px 16px; margin: 14px 0; font-size: 13.5px;
+  }
+  .callout.blue { border-color: var(--primary); background: #eff6ff; }
+  .callout.green { border-color: var(--accent-green); background: #ecfdf5; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .tag {
+    display: inline-block; padding: 1px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; margin-right: 6px;
+  }
+  .tag.blue { background: #dbeafe; color: #1d4ed8; }
+  .tag.green { background: #d1fae5; color: #047857; }
+  .tag.purple { background: #ede9fe; color: #6d28d9; }
+  .tag.orange { background: #fef3c7; color: #b45309; }
+  .tag.gray { background: #e2e8f0; color: #475569; }
+
+  footer { text-align: center; color: var(--text-light); font-size: 13px; padding: 24px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <h1>TrendRadar 系统架构文档</h1>
+    <div class="subtitle">热点新闻聚合 · AI 筛选分析 · 多渠道推送 · MCP 数据服务</div>
+    <div class="meta">
+      <span>引擎版本 v6.5.0</span>
+      <span>MCP Server v4.0.0</span>
+      <span>Python ≥ 3.10</span>
+      <span>License GPL-3.0</span>
+      <span>文档基线：master@512147c</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+<nav class="toc">
+  <h2>目录</h2>
+  <ol>
+    <li><a href="#s1">1. 项目定位与总览</a></li>
+    <li><a href="#s2">2. 总体架构</a></li>
+    <li><a href="#s3">3. 核心引擎模块划分</a></li>
+    <li><a href="#s4">4. 主流程与数据流</a></li>
+    <li><a href="#s5">5. 调度系统</a></li>
+    <li><a href="#s6">6. AI 处理管线</a></li>
+    <li><a href="#s7">7. 数据存储架构</a></li>
+    <li><a href="#s8">8. 通知分发系统</a></li>
+    <li><a href="#s9">9. MCP Server 架构</a></li>
+    <li><a href="#s10">10. 部署架构</a></li>
+    <li><a href="#s11">11. 关键设计决策</a></li>
+    <li><a href="#s12">12. 技术栈清单</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<section id="s1">
+  <h2 class="sec">1. 项目定位与总览</h2>
+  <p>TrendRadar 是一个面向<strong>个人用户的轻量级热点情报雷达</strong>：聚合 11 个中文热榜平台与任意 RSS 订阅源，经关键词或 AI 兴趣筛选、LLM 深度分析与翻译后，生成 HTML 报告并推送到 9 类通知渠道。系统由两个可执行入口组成：</p>
+  <ul>
+    <li><code>trendradar</code>（CLI 引擎）——<strong>采集与生产侧</strong>：单次进程运行，由外部定时器（cron / GitHub Actions / supercronic）驱动，跑完即退出。</li>
+    <li><code>trendradar-mcp</code>（MCP Server）——<strong>数据消费侧</strong>：将爬虫沉淀的 SQLite 新闻库以 27 个 MCP 工具暴露给 Cursor / Cline / Cherry Studio 等 AI 客户端，实现自然语言热点问答、趋势分析、结果再推送。</li>
+  </ul>
+  <table>
+    <tr><th style="width:160px">维度</th><th>说明</th></tr>
+    <tr><td>产品形态</td><td>Python CLI（无常驻进程）+ 可选常驻 MCP HTTP 服务</td></tr>
+    <tr><td>数据来源</td><td>热榜：NewsNow 聚合 API（11 平台）；RSS：RSS 2.0 / Atom / JSON Feed 1.1 任意订阅源</td></tr>
+    <tr><td>AI 能力</td><td>基于 LiteLLM 统一接口，支持 100+ 提供商（DeepSeek / OpenAI / Gemini / Claude / Ollama 本地模型 / 任意 OpenAI 兼容端点）</td></tr>
+    <tr><td>存储</td><td>SQLite 按日分库（主存储）+ S3 兼容远程存储（R2 / OSS / COS / MinIO）+ TXT / HTML 快照</td></tr>
+    <tr><td>推送渠道</td><td>飞书、钉钉、企业微信、Telegram、邮件(SMTP)、ntfy、Bark、Slack、通用 Webhook（可接 Discord/Matrix/IFTTT），全部支持多账号（≤3）</td></tr>
+    <tr><td>部署路线</td><td>① GitHub Actions 免服务器（7 天试用签到制）② Docker 双容器常驻 ③ 本地 / cron</td></tr>
+  </table>
+  <div class="callout blue">
+    <strong>架构核心特征：</strong>引擎是"无状态单次执行 + SQLite 日库"的批处理管线，所有"定时"语义由外部 cron 实现；程序内的 Scheduler 仅决定"本次运行该不该采集 / 分析 / 推送"。MCP Server 与引擎在 Docker 中是两个容器，但代码层面<strong>进程内直连</strong>（直接 import <code>trendradar</code> 包），通过共享 <code>output/</code> 卷或 S3 拉取获得数据。
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="s2">
+  <h2 class="sec">2. 总体架构</h2>
+
+  <figure class="figure">
+    <div class="svg-wrap">
+    <svg viewBox="0 0 1180 950" xmlns="http://www.w3.org/2000/svg" font-size="13">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+        </marker>
+        <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+        </marker>
+        <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#059669"/>
+        </marker>
+      </defs>
+
+      <!-- ===== 触发层 ===== -->
+      <rect x="270" y="10" width="640" height="86" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6 4"/>
+      <text x="590" y="32" text-anchor="middle" fill="#475569" font-weight="700" font-size="14">触发层（外部定时器 · 决定何时运行）</text>
+      <rect x="298" y="44" width="180" height="38" rx="6" fill="#fff" stroke="#94a3b8"/>
+      <text x="388" y="68" text-anchor="middle" fill="#334155">本地手动 / 系统 cron</text>
+      <rect x="500" y="44" width="180" height="38" rx="6" fill="#fff" stroke="#94a3b8"/>
+      <text x="590" y="68" text-anchor="middle" fill="#334155">GitHub Actions（每小时）</text>
+      <rect x="702" y="44" width="180" height="38" rx="6" fill="#fff" stroke="#94a3b8"/>
+      <text x="792" y="68" text-anchor="middle" fill="#334155">Docker supercronic（*/30）</text>
+      <line x1="590" y1="96" x2="590" y2="130" stroke="#475569" stroke-width="1.6" marker-end="url(#arr)"/>
+
+      <!-- ===== 核心引擎大框 ===== -->
+      <rect x="30" y="132" width="880" height="510" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+      <text x="470" y="160" text-anchor="middle" fill="#1e40af" font-weight="700" font-size="16">核心引擎  trendradar（CLI · 单次执行）</text>
+
+      <!-- 编排层 -->
+      <rect x="60" y="178" width="820" height="92" rx="8" fill="#dbeafe" stroke="#2563eb"/>
+      <text x="470" y="202" text-anchor="middle" fill="#1e3a8a" font-weight="700">编排层</text>
+      <rect x="90" y="212" width="360" height="44" rx="6" fill="#fff" stroke="#60a5fa"/>
+      <text x="270" y="231" text-anchor="middle" fill="#1e293b" font-weight="600">NewsAnalyzer（主编排器）</text>
+      <text x="270" y="248" text-anchor="middle" fill="#64748b" font-size="11.5">trendradar/__main__.py · run() 全链路</text>
+      <rect x="480" y="212" width="370" height="44" rx="6" fill="#fff" stroke="#60a5fa"/>
+      <text x="665" y="231" text-anchor="middle" fill="#1e293b" font-weight="600">AppContext（组合根 + Facade + 懒加载）</text>
+      <text x="665" y="248" text-anchor="middle" fill="#64748b" font-size="11.5">trendradar/context.py · 统一依赖装配</text>
+      <line x1="450" y1="234" x2="480" y2="234" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrB)"/>
+
+      <!-- 四个功能层 -->
+      <!-- 采集层 -->
+      <rect x="60" y="292" width="192" height="180" rx="8" fill="#f0f9ff" stroke="#0284c7"/>
+      <text x="156" y="316" text-anchor="middle" fill="#0c4a6e" font-weight="700">采集层 crawler/</text>
+      <rect x="76" y="328" width="160" height="56" rx="5" fill="#fff" stroke="#7dd3fc"/>
+      <text x="156" y="348" text-anchor="middle" fill="#0c4a6e" font-weight="600">DataFetcher 热榜</text>
+      <text x="156" y="366" text-anchor="middle" fill="#64748b" font-size="11">NewsNow API · 串行限速</text>
+      <rect x="76" y="394" width="160" height="64" rx="5" fill="#fff" stroke="#7dd3fc"/>
+      <text x="156" y="414" text-anchor="middle" fill="#0c4a6e" font-weight="600">RSSFetcher + RSSParser</text>
+      <text x="156" y="431" text-anchor="middle" fill="#64748b" font-size="11">RSS2.0 / Atom / JSON Feed</text>
+      <text x="156" y="447" text-anchor="middle" fill="#64748b" font-size="11">feedparser + 自实现解析</text>
+
+      <!-- 存储层 -->
+      <rect x="272" y="292" width="192" height="180" rx="8" fill="#ecfdf5" stroke="#059669"/>
+      <text x="368" y="316" text-anchor="middle" fill="#064e3b" font-weight="700">存储层 storage/</text>
+      <rect x="288" y="328" width="160" height="56" rx="5" fill="#fff" stroke="#6ee7b7"/>
+      <text x="368" y="348" text-anchor="middle" fill="#064e3b" font-weight="600">StorageManager</text>
+      <text x="368" y="366" text-anchor="middle" fill="#64748b" font-size="11">auto / local / remote 策略</text>
+      <rect x="288" y="394" width="160" height="64" rx="5" fill="#fff" stroke="#6ee7b7"/>
+      <text x="368" y="414" text-anchor="middle" fill="#064e3b" font-weight="600">双后端抽象</text>
+      <text x="368" y="431" text-anchor="middle" fill="#64748b" font-size="11">Local：SQLite 按日分库</text>
+      <text x="368" y="447" text-anchor="middle" fill="#64748b" font-size="11">Remote：S3 兼容（boto3）</text>
+
+      <!-- 分析层 -->
+      <rect x="484" y="292" width="192" height="180" rx="8" fill="#f5f3ff" stroke="#7c3aed"/>
+      <text x="580" y="316" text-anchor="middle" fill="#4c1d95" font-weight="700">分析层 core/ + ai/</text>
+      <rect x="500" y="328" width="160" height="56" rx="5" fill="#fff" stroke="#c4b5fd"/>
+      <text x="580" y="348" text-anchor="middle" fill="#4c1d95" font-weight="600">筛选分流</text>
+      <text x="580" y="366" text-anchor="middle" fill="#64748b" font-size="11">keyword 词频 ｜ ai 兴趣标签</text>
+      <rect x="500" y="394" width="160" height="64" rx="5" fill="#fff" stroke="#c4b5fd"/>
+      <text x="580" y="414" text-anchor="middle" fill="#4c1d95" font-weight="600">LLM 能力（LiteLLM）</text>
+      <text x="580" y="431" text-anchor="middle" fill="#64748b" font-size="11">AIAnalyzer 五板块分析</text>
+      <text x="580" y="447" text-anchor="middle" fill="#64748b" font-size="11">AITranslator 批量翻译</text>
+
+      <!-- 输出层 -->
+      <rect x="696" y="292" width="184" height="180" rx="8" fill="#fffbeb" stroke="#d97706"/>
+      <text x="788" y="316" text-anchor="middle" fill="#78350f" font-weight="700">输出层 report/ + notification/</text>
+      <rect x="712" y="328" width="152" height="56" rx="5" fill="#fff" stroke="#fcd34d"/>
+      <text x="788" y="348" text-anchor="middle" fill="#78350f" font-weight="600">HTML 报告</text>
+      <text x="788" y="366" text-anchor="middle" fill="#64748b" font-size="11">快照 / latest / index</text>
+      <rect x="712" y="394" width="152" height="64" rx="5" fill="#fff" stroke="#fcd34d"/>
+      <text x="788" y="414" text-anchor="middle" fill="#78350f" font-weight="600">通知分发</text>
+      <text x="788" y="431" text-anchor="middle" fill="#64748b" font-size="11">渲染→翻译→拆分→分批</text>
+      <text x="788" y="447" text-anchor="middle" fill="#64748b" font-size="11">9 渠道 × 多账号</text>
+
+      <!-- 层间箭头 -->
+      <line x1="252" y1="382" x2="272" y2="382" stroke="#475569" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="464" y1="382" x2="484" y2="382" stroke="#475569" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="676" y1="382" x2="696" y2="382" stroke="#475569" stroke-width="1.6" marker-end="url(#arr)"/>
+
+      <!-- 调度 -->
+      <rect x="60" y="494" width="820" height="56" rx="8" fill="#fef2f2" stroke="#dc2626"/>
+      <text x="470" y="518" text-anchor="middle" fill="#7f1d1d" font-weight="700">调度系统 core/scheduler.py + config/timeline.yaml</text>
+      <text x="470" y="537" text-anchor="middle" fill="#64748b" font-size="11.5">5 套预设（always_on / morning_evening / office_hours / night_owl / custom）· 按时段覆盖采集 / 分析 / 推送 / 报告模式 · period_executions 表保证幂等</text>
+      <line x1="470" y1="472" x2="470" y2="494" stroke="#dc2626" stroke-width="1.6" marker-end="url(#arr)" stroke-dasharray="5 3"/>
+
+      <!-- 配置 -->
+      <rect x="60" y="566" width="820" height="56" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
+      <text x="470" y="590" text-anchor="middle" fill="#334155" font-weight="700">配置体系 core/loader.py</text>
+      <text x="470" y="609" text-anchor="middle" fill="#64748b" font-size="11.5">config.yaml（v2.2.0）+ timeline.yaml + 环境变量覆盖（AI_API_KEY / S3_* / 各渠道 Webhook）→ 扁平化配置字典</text>
+
+      <!-- ===== MCP Server ===== -->
+      <rect x="940" y="132" width="210" height="510" rx="12" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+      <text x="1045" y="162" text-anchor="middle" fill="#064e3b" font-weight="700" font-size="14">MCP Server</text>
+      <text x="1045" y="180" text-anchor="middle" fill="#64748b" font-size="11.5">mcp_server/ · FastMCP 2.0</text>
+      <rect x="956" y="196" width="178" height="70" rx="6" fill="#fff" stroke="#34d399"/>
+      <text x="1045" y="217" text-anchor="middle" fill="#064e3b" font-weight="600">传输双模式</text>
+      <text x="1045" y="234" text-anchor="middle" fill="#64748b" font-size="11">stdio（本地拉起）</text>
+      <text x="1045" y="250" text-anchor="middle" fill="#64748b" font-size="11">HTTP :3333/mcp（Docker）</text>
+      <rect x="956" y="278" width="178" height="60" rx="6" fill="#fff" stroke="#34d399"/>
+      <text x="1045" y="300" text-anchor="middle" fill="#064e3b" font-weight="600">27 个 MCP 工具</text>
+      <text x="1045" y="318" text-anchor="middle" fill="#64748b" font-size="11">查询/搜索/分析/配置/运维</text>
+      <rect x="956" y="350" width="178" height="56" rx="6" fill="#fff" stroke="#34d399"/>
+      <text x="1045" y="371" text-anchor="middle" fill="#064e3b" font-weight="600">4 个 MCP 资源</text>
+      <text x="1045" y="389" text-anchor="middle" fill="#64748b" font-size="11">平台/RSS/关键词/日期</text>
+      <rect x="956" y="418" width="178" height="60" rx="6" fill="#fff" stroke="#34d399"/>
+      <text x="1045" y="440" text-anchor="middle" fill="#064e3b" font-weight="600">内部三层</text>
+      <text x="1045" y="458" text-anchor="middle" fill="#64748b" font-size="11">tools 8 类 / services 3 个</text>
+      <text x="1045" y="474" text-anchor="middle" fill="#64748b" font-size="11">utils 校验/错误/日期</text>
+      <rect x="956" y="490" width="178" height="56" rx="6" fill="#d1fae5" stroke="#059669"/>
+      <text x="1045" y="511" text-anchor="middle" fill="#064e3b" font-weight="600">进程内直连核心包</text>
+      <text x="1045" y="529" text-anchor="middle" fill="#64748b" font-size="11">import trendradar 复用引擎</text>
+
+      <!-- 引擎 ↔ MCP -->
+      <path d="M 910 390 L 940 390" stroke="#059669" stroke-width="2" marker-end="url(#arrG)" marker-start="url(#arrG)" fill="none"/>
+      <text x="925" y="378" text-anchor="middle" fill="#047857" font-size="10.5">复用</text>
+
+      <!-- AI 客户端 -->
+      <rect x="956" y="560" width="178" height="64" rx="8" fill="#f0f9ff" stroke="#0284c7"/>
+      <text x="1045" y="583" text-anchor="middle" fill="#0c4a6e" font-weight="700">AI 客户端</text>
+      <text x="1045" y="601" text-anchor="middle" fill="#64748b" font-size="11">Cursor / Cline / Cherry Studio</text>
+      <text x="1045" y="616" text-anchor="middle" fill="#64748b" font-size="11">自然语言问答与分析</text>
+      <line x1="1045" y1="560" x2="1045" y2="546" stroke="#059669" stroke-width="1.8" marker-end="url(#arrG)" marker-start="url(#arrG)"/>
+
+      <!-- ===== 外部服务层 ===== -->
+      <rect x="30" y="700" width="1120" height="230" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6 4"/>
+      <text x="590" y="728" text-anchor="middle" fill="#475569" font-weight="700" font-size="14">外部依赖服务</text>
+
+      <rect x="70" y="750" width="240" height="150" rx="8" fill="#fff" stroke="#cbd5e1"/>
+      <text x="190" y="778" text-anchor="middle" fill="#334155" font-weight="700">NewsNow 聚合 API</text>
+      <text x="190" y="802" text-anchor="middle" fill="#64748b" font-size="11.5">newsnow.busiyi.world/api/s</text>
+      <text x="190" y="824" text-anchor="middle" fill="#64748b" font-size="11.5">11 平台热榜 JSON</text>
+      <text x="190" y="846" text-anchor="middle" fill="#94a3b8" font-size="11">今日头条/百度/微博/知乎/抖音</text>
+      <text x="190" y="864" text-anchor="middle" fill="#94a3b8" font-size="11">B站/澎湃/凤凰/贴吧/财联社/华尔街见闻</text>
+
+      <rect x="340" y="750" width="200" height="150" rx="8" fill="#fff" stroke="#cbd5e1"/>
+      <text x="440" y="778" text-anchor="middle" fill="#334155" font-weight="700">RSS 订阅源</text>
+      <text x="440" y="802" text-anchor="middle" fill="#64748b" font-size="11.5">hnrss.org / 雅虎财经 / 自定义</text>
+      <text x="440" y="824" text-anchor="middle" fill="#64748b" font-size="11.5">RSS 2.0 · Atom · JSON Feed</text>
+
+      <rect x="570" y="750" width="260" height="150" rx="8" fill="#fff" stroke="#cbd5e1"/>
+      <text x="700" y="778" text-anchor="middle" fill="#334155" font-weight="700">LLM 提供商（LiteLLM 统一）</text>
+      <text x="700" y="802" text-anchor="middle" fill="#64748b" font-size="11.5">100+ Provider · 默认 deepseek-chat</text>
+      <text x="700" y="824" text-anchor="middle" fill="#94a3b8" font-size="11">OpenAI / Gemini / Claude / Ollama</text>
+      <text x="700" y="842" text-anchor="middle" fill="#94a3b8" font-size="11">任意 OpenAI 兼容端点（openai/ 前缀）</text>
+
+      <rect x="860" y="750" width="260" height="150" rx="8" fill="#fff" stroke="#cbd5e1"/>
+      <text x="990" y="778" text-anchor="middle" fill="#334155" font-weight="700">S3 兼容对象存储</text>
+      <text x="990" y="802" text-anchor="middle" fill="#64748b" font-size="11.5">R2 / OSS / COS / MinIO / AWS</text>
+      <text x="990" y="824" text-anchor="middle" fill="#94a3b8" font-size="11">远程 SQLite 日库 + HTML 归档</text>
+      <text x="990" y="842" text-anchor="middle" fill="#94a3b8" font-size="11">MCP 侧可回拉（sync_from_remote）</text>
+
+      <!-- 外部服务连接线 -->
+      <line x1="156" y1="472" x2="156" y2="700" stroke="#cbd5e1" stroke-width="1.4" marker-end="url(#arr)" stroke-dasharray="4 3"/>
+      <line x1="368" y1="472" x2="368" y2="700" stroke="#cbd5e1" stroke-width="1.4" marker-end="url(#arr)" stroke-dasharray="4 3" transform="translate(72,0)"/>
+      <line x1="580" y1="472" x2="580" y2="700" stroke="#cbd5e1" stroke-width="1.4" marker-end="url(#arr)" stroke-dasharray="4 3" transform="translate(120,0)"/>
+      <line x1="788" y1="472" x2="788" y2="700" stroke="#cbd5e1" stroke-width="1.4" marker-end="url(#arr)" stroke-dasharray="4 3" transform="translate(172,0)"/>
+    </svg>
+    </div>
+    <figcaption>图 2-1 · TrendRadar 总体架构：触发层驱动无状态引擎，四层功能管线 + 调度/配置横切，MCP Server 进程内复用核心包服务 AI 客户端</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ -->
+<section id="s3">
+  <h2 class="sec">3. 核心引擎模块划分</h2>
+  <p>核心包 <code>trendradar/</code> 共约 2.5 万行，按职责划分为 8 个子模块：</p>
+  <table>
+    <tr><th style="width:190px">模块</th><th style="width:120px">角色</th><th>职责</th></tr>
+    <tr>
+      <td><code>__main__.py</code> (2272 行)</td>
+      <td><span class="tag blue">编排</span></td>
+      <td>CLI 入口 + <code>NewsAnalyzer</code> 主编排类，串联"抓取→调度→筛选→分析→报告→推送"全链路；附 3 个子命令：<code>--doctor</code>（环境体检）、<code>--show-schedule</code>（调度解析查看）、<code>--test-notification</code>（渠道连通测试）</td>
+    </tr>
+    <tr>
+      <td><code>context.py</code> (1115 行)</td>
+      <td><span class="tag blue">装配</span></td>
+      <td><code>AppContext</code> 应用上下文：组合根 + Facade + 实例级懒加载（非全局单例，明确为消除全局 CONFIG、提高可测试性而设计）</td>
+    </tr>
+    <tr>
+      <td><code>core/</code></td>
+      <td><span class="tag blue">内核</span></td>
+      <td><code>loader.py</code> 配置加载合并；<code>scheduler.py</code> 时间线调度；<code>data.py</code> 当日数据读取/新增检测；<code>analyzer.py</code> 权重计算与词频统计；<code>frequency.py</code> 关键词语法引擎；<code>config.py</code> 多账号解析</td>
+    </tr>
+    <tr>
+      <td><code>crawler/</code></td>
+      <td><span class="tag green">采集</span></td>
+      <td><code>fetcher.py</code> 热榜抓取（NewsNow API）；<code>rss/</code> RSS 抓取与三格式解析</td>
+    </tr>
+    <tr>
+      <td><code>storage/</code></td>
+      <td><span class="tag green">存储</span></td>
+      <td>抽象基类 + SQLite Mixin + 本地/远程双后端 + Manager 策略切换（详见第 7 节）</td>
+    </tr>
+    <tr>
+      <td><code>ai/</code></td>
+      <td><span class="tag purple">智能</span></td>
+      <td><code>client.py</code> LiteLLM 统一客户端；<code>filter.py</code> 两阶段兴趣筛选；<code>analyzer.py</code> 五板块深度分析；<code>translator.py</code> 批量翻译；<code>formatter.py</code> AI 结果多渠道格式化</td>
+    </tr>
+    <tr>
+      <td><code>report/</code></td>
+      <td><span class="tag orange">输出</span></td>
+      <td>报告数据规整 + HTML 渲染（时间戳快照 / latest / index 四份产物）</td>
+    </tr>
+    <tr>
+      <td><code>notification/</code></td>
+      <td><span class="tag orange">输出</span></td>
+      <td>9 渠道分发器：渲染→翻译→字节级拆分→批头→多账号发送（详见第 8 节）</td>
+    </tr>
+    <tr>
+      <td><code>utils/</code></td>
+      <td><span class="tag gray">工具</span></td>
+      <td><code>time.py</code> 时区安全时间；<code>url.py</code> <code>normalize_url</code> 追踪参数清洗（存储去重关键）</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<section id="s4">
+  <h2 class="sec">4. 主流程与数据流</h2>
+  <p>引擎单次执行的主调用链由 <code>NewsAnalyzer.run()</code>（<code class="file">trendradar/__main__.py:1687</code>）编排，核心编排在 <code>_execute_mode_strategy()</code>（<code class="file">trendradar/__main__.py:1467</code>）与分析流水线 <code>_run_analysis_pipeline()</code>（<code class="file">trendradar/__main__.py:794</code>）：</p>
+
+  <figure class="figure">
+    <div class="svg-wrap">
+    <svg viewBox="0 0 1180 640" xmlns="http://www.w3.org/2000/svg" font-size="12.5">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+        </marker>
+      </defs>
+
+      <!-- 阶段泳道标签 -->
+      <rect x="10" y="20" width="86" height="560" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="53" y="300" text-anchor="middle" fill="#1e40af" font-weight="700" font-size="14" transform="rotate(-90 53 300)">① 采集入库</text>
+      <rect x="106" y="20" width="86" height="560" rx="8" fill="#f0fdf4" stroke="#bbf7d0"/>
+      <text x="149" y="300" text-anchor="middle" fill="#166534" font-weight="700" font-size="14" transform="rotate(-90 149 300)">② 调度决策</text>
+      <rect x="202" y="20" width="86" height="560" rx="8" fill="#faf5ff" stroke="#e9d5ff"/>
+      <text x="245" y="300" text-anchor="middle" fill="#6b21a8" font-weight="700" font-size="14" transform="rotate(-90 245 300)">③ 筛选分析</text>
+      <rect x="298" y="20" width="86" height="560" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+      <text x="341" y="300" text-anchor="middle" fill="#92400e" font-weight="700" font-size="14" transform="rotate(-90 341 300)">④ 输出分发</text>
+
+      <!-- 步骤框 -->
+      <!-- 泳道1 -->
+      <rect x="118" y="36" width="66" height="64" rx="6" fill="#fff" stroke="#0284c7"/>
+      <text x="151" y="58" text-anchor="middle" font-weight="700" fill="#0c4a6e" font-size="11.5">抓取热榜</text>
+      <text x="151" y="74" text-anchor="middle" fill="#64748b" font-size="10">DataFetcher</text>
+      <text x="151" y="88" text-anchor="middle" fill="#64748b" font-size="10">11 平台串行</text>
+      <rect x="118" y="120" width="66" height="64" rx="6" fill="#fff" stroke="#0284c7"/>
+      <text x="151" y="142" text-anchor="middle" font-weight="700" fill="#0c4a6e" font-size="11.5">抓取 RSS</text>
+      <text x="151" y="158" text-anchor="middle" fill="#64748b" font-size="10">RSSFetcher</text>
+      <text x="151" y="172" text-anchor="middle" fill="#64748b" font-size="10">三格式解析</text>
+      <rect x="118" y="204" width="66" height="78" rx="6" fill="#fff" stroke="#0284c7"/>
+      <text x="151" y="226" text-anchor="middle" font-weight="700" fill="#0c4a6e" font-size="11.5">入库去重</text>
+      <text x="151" y="242" text-anchor="middle" fill="#64748b" font-size="10">URL 标准化</text>
+      <text x="151" y="256" text-anchor="middle" fill="#64748b" font-size="10">upsert 合并</text>
+      <text x="151" y="270" text-anchor="middle" fill="#64748b" font-size="10">排名轨迹/脱榜</text>
+      <line x1="151" y1="100" x2="151" y2="120" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+      <line x1="151" y1="184" x2="151" y2="204" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+
+      <!-- 泳道2 -->
+      <rect x="214" y="120" width="66" height="90" rx="6" fill="#fff" stroke="#16a34a"/>
+      <text x="247" y="142" text-anchor="middle" font-weight="700" fill="#14532d" font-size="11.5">调度解析</text>
+      <text x="247" y="158" text-anchor="middle" fill="#64748b" font-size="10">Scheduler</text>
+      <text x="247" y="172" text-anchor="middle" fill="#64748b" font-size="10">.resolve()</text>
+      <text x="247" y="186" text-anchor="middle" fill="#64748b" font-size="10">时段行为开关</text>
+      <rect x="214" y="240" width="66" height="64" rx="6" fill="#fff" stroke="#16a34a"/>
+      <text x="247" y="262" text-anchor="middle" font-weight="700" fill="#14532d" font-size="11.5">按模式取数</text>
+      <text x="247" y="278" text-anchor="middle" fill="#64748b" font-size="10">daily 当前累计</text>
+      <text x="247" y="292" text-anchor="middle" fill="#64748b" font-size="10">current 在榜/增量新增</text>
+      <line x1="247" y1="210" x2="247" y2="240" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+      <!-- collect=false 分支 -->
+      <rect x="200" y="36" width="94" height="34" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+      <text x="247" y="57" text-anchor="middle" fill="#991b1b" font-size="10.5">collect=false → 跳过</text>
+      <line x1="247" y1="120" x2="247" y2="70" stroke="#dc2626" stroke-width="1.3" marker-end="url(#a2)" stroke-dasharray="4 3"/>
+
+      <!-- 泳道1 → 泳道2 -->
+      <path d="M 184 243 C 200 243, 198 165, 214 165" stroke="#334155" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+
+      <!-- 泳道3 -->
+      <rect x="310" y="36" width="70" height="80" rx="6" fill="#fff" stroke="#7c3aed"/>
+      <text x="345" y="58" text-anchor="middle" font-weight="700" fill="#4c1d95" font-size="11.5">筛选分流</text>
+      <text x="345" y="74" text-anchor="middle" fill="#64748b" font-size="10">keyword 词频</text>
+      <text x="345" y="88" text-anchor="middle" fill="#64748b" font-size="10">ai 兴趣标签</text>
+      <text x="345" y="102" text-anchor="middle" fill="#64748b" font-size="10">（失败自动回退）</text>
+      <rect x="310" y="150" width="70" height="80" rx="6" fill="#fff" stroke="#7c3aed"/>
+      <text x="345" y="172" text-anchor="middle" font-weight="700" fill="#4c1d95" font-size="11.5">AI 深度分析</text>
+      <text x="345" y="188" text-anchor="middle" fill="#64748b" font-size="10">AIAnalyzer</text>
+      <text x="345" y="202" text-anchor="middle" fill="#64748b" font-size="10">五板块结果</text>
+      <text x="345" y="216" text-anchor="middle" fill="#64748b" font-size="10">JSON 三重容错</text>
+      <rect x="310" y="260" width="70" height="64" rx="6" fill="#fff" stroke="#7c3aed"/>
+      <text x="345" y="282" text-anchor="middle" font-weight="700" fill="#4c1d95" font-size="11.5">独立展示区</text>
+      <text x="345" y="298" text-anchor="middle" fill="#64748b" font-size="10">指定平台完整榜</text>
+      <text x="345" y="312" text-anchor="middle" fill="#64748b" font-size="10">不受筛选影响</text>
+      <line x1="345" y1="116" x2="345" y2="150" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+      <line x1="345" y1="230" x2="345" y2="260" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+      <!-- 泳道2 → 泳道3 -->
+      <path d="M 280 272 C 296 272, 294 76, 310 76" stroke="#334155" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+
+      <!-- 泳道4 -->
+      <rect x="406" y="36" width="66" height="80" rx="6" fill="#fff" stroke="#d97706"/>
+      <text x="439" y="58" text-anchor="middle" font-weight="700" fill="#78350f" font-size="11.5">HTML 报告</text>
+      <text x="439" y="74" text-anchor="middle" fill="#64748b" font-size="10">4 份产物</text>
+      <text x="439" y="88" text-anchor="middle" fill="#64748b" font-size="10">快照/latest</text>
+      <text x="439" y="102" text-anchor="middle" fill="#64748b" font-size="10">index×2</text>
+      <rect x="406" y="150" width="66" height="64" rx="6" fill="#fff" stroke="#d97706"/>
+      <text x="439" y="172" text-anchor="middle" font-weight="700" fill="#78350f" font-size="11.5">翻译前置</text>
+      <text x="439" y="188" text-anchor="middle" fill="#64748b" font-size="10">批量标题翻译</text>
+      <text x="439" y="202" text-anchor="middle" fill="#64748b" font-size="10">单次 API 回填</text>
+      <rect x="406" y="240" width="66" height="64" rx="6" fill="#fff" stroke="#d97706"/>
+      <text x="439" y="262" text-anchor="middle" font-weight="700" fill="#78350f" font-size="11.5">拆分分批</text>
+      <text x="439" y="278" text-anchor="middle" fill="#64748b" font-size="10">字节级上限</text>
+      <text x="439" y="292" text-anchor="middle" fill="#64748b" font-size="10">词组原子性</text>
+      <rect x="406" y="334" width="66" height="78" rx="6" fill="#fff" stroke="#d97706"/>
+      <text x="439" y="356" text-anchor="middle" font-weight="700" fill="#78350f" font-size="11.5">多渠发送</text>
+      <text x="439" y="372" text-anchor="middle" fill="#64748b" font-size="10">9 渠道×多账号</text>
+      <text x="439" y="386" text-anchor="middle" fill="#64748b" font-size="10">批头标记</text>
+      <text x="439" y="400" text-anchor="middle" fill="#64748b" font-size="10">once 幂等记录</text>
+      <line x1="439" y1="116" x2="439" y2="150" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+      <line x1="439" y1="214" x2="439" y2="240" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+      <line x1="439" y1="304" x2="439" y2="334" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+      <!-- 泳道3 → 泳道4 -->
+      <path d="M 380 76 C 396 76, 392 76, 406 76" stroke="#334155" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+      <path d="M 380 292 C 396 292, 392 182, 406 182" stroke="#334155" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+
+      <!-- 数据形态注记 -->
+      <rect x="510" y="36" width="650" height="376" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text x="835" y="64" text-anchor="middle" fill="#334155" font-weight="700" font-size="13.5">数据形态演进（左：阶段 → 右：产出）</text>
+
+      <rect x="530" y="80" width="280" height="60" rx="6" fill="#f0f9ff" stroke="#bae6fd"/>
+      <text x="670" y="102" text-anchor="middle" fill="#0c4a6e" font-weight="600" font-size="11.5">API JSON / Feed XML</text>
+      <text x="670" y="120" text-anchor="middle" fill="#64748b" font-size="10.5">items[].{title,url,rank} · entry 元素</text>
+
+      <rect x="530" y="156" width="280" height="72" rx="6" fill="#ecfdf5" stroke="#a7f3d0"/>
+      <text x="670" y="178" text-anchor="middle" fill="#064e3b" font-weight="600" font-size="11.5">NewsData / RSSItem（dataclass）</text>
+      <text x="670" y="196" text-anchor="middle" fill="#64748b" font-size="10.5">ranks[] / first_time / last_time / count</text>
+      <text x="670" y="212" text-anchor="middle" fill="#64748b" font-size="10.5">rank_timeline 排名轨迹</text>
+
+      <rect x="530" y="244" width="280" height="60" rx="6" fill="#f5f3ff" stroke="#ddd6fe"/>
+      <text x="670" y="266" text-anchor="middle" fill="#4c1d95" font-weight="600" font-size="11.5">stats = [{word, count, titles[]}]</text>
+      <text x="670" y="284" text-anchor="middle" fill="#64748b" font-size="10.5">关键词/AI 标签两条路径统一收敛于此形态</text>
+
+      <rect x="530" y="320" width="280" height="72" rx="6" fill="#fffbeb" stroke="#fde68a"/>
+      <text x="670" y="342" text-anchor="middle" fill="#78350f" font-weight="600" font-size="11.5">AIAnalysisResult（5 板块）+ 各渠道消息体</text>
+      <text x="670" y="360" text-anchor="middle" fill="#64748b" font-size="10.5">态势/舆论/信号/洞察/研判 + 渠道专属格式</text>
+      <text x="670" y="376" text-anchor="middle" fill="#64748b" font-size="10.5">字节级分批后的消息序列</text>
+
+      <line x1="670" y1="140" x2="670" y2="156" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+      <line x1="670" y1="228" x2="670" y2="244" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+      <line x1="670" y1="304" x2="670" y2="320" stroke="#334155" stroke-width="1.5" marker-end="url(#a2)"/>
+
+      <!-- 底部关键设计 -->
+      <rect x="510" y="430" width="650" height="150" rx="10" fill="#eff6ff" stroke="#93c5fd"/>
+      <text x="835" y="456" text-anchor="middle" fill="#1e40af" font-weight="700" font-size="13">贯穿性机制</text>
+      <text x="534" y="482" fill="#334155" font-size="11.5">· 权重排序：score = 0.6×rank + 0.3×frequency + 0.1×hotness（advanced.weight 可调）</text>
+      <text x="534" y="506" fill="#334155" font-size="11.5">· URL 标准化：剔除 utm_* 等追踪参数 + 平台动态参数（weibo band_rank 等）→ (url, platform) 唯一去重</text>
+      <text x="534" y="530" fill="#334155" font-size="11.5">· 脱榜检测：上次在榜、本次不在 → rank_history 写入 rank=0 记录，支撑趋势分析</text>
+      <text x="534" y="554" fill="#334155" font-size="11.5">· 幂等推送：once.push 成功后写 period_executions，同时间段不重复推送</text>
+      <text x="534" y="578" fill="#334155" font-size="11.5">· 降级链：AI 筛选失败→关键词匹配；远程存储失败→本地；未配渠道→只抓取不推送</text>
+
+      <!-- 本地打开浏览器 -->
+      <rect x="118" y="440" width="352" height="60" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
+      <text x="294" y="464" text-anchor="middle" fill="#334155" font-weight="600" font-size="11.5">本地运行收尾</text>
+      <text x="294" y="482" text-anchor="middle" fill="#64748b" font-size="10.5">自动打开浏览器展示 HTML 报告 · ctx.cleanup() 清理过期数据</text>
+      <line x1="439" y1="412" x2="439" y2="440" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#a2)" stroke-dasharray="4 3"/>
+    </svg>
+    </div>
+    <figcaption>图 4-1 · 主流程四阶段泳道与数据形态演进（关键编排点：<code class="mono">__main__.py:794 _run_analysis_pipeline</code> / <code class="mono">:1467 _execute_mode_strategy</code>）</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ -->
+<section id="s5">
+  <h2 class="sec">5. 调度系统</h2>
+  <p>"什么时候采集、什么时候分析、什么时候推送、用什么报告模式"由<strong>声明式时间线</strong>决定，而非硬编码 cron 语义：</p>
+  <div class="grid-2">
+    <div>
+      <h3>数据模型（config/timeline.yaml）</h3>
+      <ul>
+        <li><code>presets</code>：4 套预设 —— <code>always_on</code>（全天候增量推）、<code>morning_evening</code>（全天 + 晚间汇总，默认启用）、<code>office_hours</code>（工作日三段式）、<code>night_owl</code>（夜猫子）</li>
+        <li><code>custom</code>：完全自定义模板</li>
+        <li>每条 timeline = <code>default</code>（默认行为）+ <code>periods</code>（时间段定义）+ <code>day_plans</code>（日计划引用 periods）+ <code>week_map</code>（周一~周日 → day_plan）+ <code>overlap.policy</code>（重叠策略：报错 / 后者生效）</li>
+        <li>每个 period 可独立配置：<code>collect / analyze / push</code> 开关、<code>report_mode</code>、<code>ai_mode</code>、<code>once.{analyze,push}</code>、甚至切换 <code>frequency_file / interests_file / filter_method</code>（不同时段用不同关键词或筛选策略）</li>
+      </ul>
+    </div>
+    <div>
+      <h3>解析与幂等</h3>
+      <ul>
+        <li>启动时 <code>Scheduler</code> 校验时间线合法性（<code class="file">trendradar/core/scheduler.py:313</code>），运行时 <code>resolve()</code> 输出当前时段的 <code>ResolvedSchedule</code>，覆盖 config.yaml 中的默认报告模式</li>
+        <li>支持跨日时段（如 22:00–02:00）</li>
+        <li><code>once</code> 语义由 SQLite <code>period_executions</code> 表（execution_date + period_key + action 唯一约束）实现存储级去重</li>
+        <li><code>schedule.enabled=false</code> 时返回全功能默认配置，回退 config.yaml 行为</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout">
+    <strong>设计要点：</strong>进程无循环、无 sleep——外部 cron 只负责"叫醒"，Scheduler 决定"醒来后做什么"。这让同一份代码可以无差别运行在手动 / Actions / Docker 三种触发环境下。
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="s6">
+  <h2 class="sec">6. AI 处理管线</h2>
+  <p>三个 AI 功能（筛选 / 分析 / 翻译）共用同一模型配置段 <code>ai:</code>（LiteLLM），默认 <code>deepseek/deepseek-chat</code>，支持 100+ 提供商与任意 OpenAI 兼容端点（<code>openai/</code> 前缀 + <code>api_base</code>）。</p>
+
+  <figure class="figure">
+    <div class="svg-wrap">
+    <svg viewBox="0 0 1140 560" xmlns="http://www.w3.org/2000/svg" font-size="12.5">
+      <defs>
+        <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6d28d9"/>
+        </marker>
+      </defs>
+
+      <!-- 统一客户端 -->
+      <rect x="30" y="20" width="1080" height="66" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.8"/>
+      <text x="570" y="46" text-anchor="middle" fill="#4c1d95" font-weight="700" font-size="14">AIClient（ai/client.py · LiteLLM 统一接口）</text>
+      <text x="570" y="68" text-anchor="middle" fill="#64748b" font-size="11.5">provider/model 格式 · FALLBACK_MODELS 备用链 · NUM_RETRIES 重试 · timeout 120s · 三个 AI 功能共享</text>
+
+      <!-- 阶段A 标签提取 -->
+      <rect x="30" y="120" width="340" height="200" rx="10" fill="#fff" stroke="#c4b5fd"/>
+      <text x="200" y="146" text-anchor="middle" fill="#4c1d95" font-weight="700">① AI 兴趣筛选 · 两阶段（ai/filter.py）</text>
+      <rect x="50" y="162" width="300" height="58" rx="6" fill="#faf5ff" stroke="#ddd6fe"/>
+      <text x="200" y="182" text-anchor="middle" fill="#334155" font-weight="600" font-size="11.5">阶段 A：标签管理（低频）</text>
+      <text x="200" y="199" text-anchor="middle" fill="#64748b" font-size="10.5">兴趣文件 MD5 对比 → 首次 extract_tags / 变更 update_tags</text>
+      <text x="200" y="214" text-anchor="middle" fill="#94a3b8" font-size="10.5">change_ratio ≥ 0.6 全量重分类，否则增量 keep/add/remove</text>
+      <rect x="50" y="232" width="300" height="70" rx="6" fill="#faf5ff" stroke="#ddd6fe"/>
+      <text x="200" y="252" text-anchor="middle" fill="#334155" font-weight="600" font-size="11.5">阶段 B：批量分类（高频）</text>
+      <text x="200" y="269" text-anchor="middle" fill="#64748b" font-size="10.5">classify_batch：200 条/批 · 间隔 5s 限流</text>
+      <text x="200" y="284" text-anchor="middle" fill="#94a3b8" font-size="10.5">每条新闻仅保留最高分标签 · min_score=0.7 阈值过滤</text>
+      <text x="200" y="298" text-anchor="middle" fill="#94a3b8" font-size="10.5">analyzed_news 表去重避免重复耗 token</text>
+
+      <!-- 阶段B AI分析 -->
+      <rect x="400" y="120" width="340" height="200" rx="10" fill="#fff" stroke="#c4b5fd"/>
+      <text x="570" y="146" text-anchor="middle" fill="#4c1d95" font-weight="700">② AI 深度分析（ai/analyzer.py）</text>
+      <text x="420" y="172" fill="#334155" font-size="11.5">输入：stats 文本化（来源|排名|时间|次数，</text>
+      <text x="420" y="189" fill="#334155" font-size="11.5">可含完整排名轨迹，上限 150 条控制成本）</text>
+      <text x="420" y="214" fill="#334155" font-size="11.5">输出：AIAnalysisResult 五大板块</text>
+      <text x="436" y="234" fill="#64748b" font-size="11">· core_trends 核心热点态势</text>
+      <text x="436" y="251" fill="#64748b" font-size="11">· sentiment_controversy 舆论风向争议</text>
+      <text x="436" y="268" fill="#64748b" font-size="11">· signals 异动与弱信号</text>
+      <text x="436" y="285" fill="#64748b" font-size="11">· rss_insights RSS 深度洞察</text>
+      <text x="436" y="302" fill="#64748b" font-size="11">· outlook_strategy 研判策略建议</text>
+
+      <!-- 阶段C 翻译 -->
+      <rect x="770" y="120" width="340" height="200" rx="10" fill="#fff" stroke="#c4b5fd"/>
+      <text x="940" y="146" text-anchor="middle" fill="#4c1d95" font-weight="700">③ AI 批量翻译（ai/translator.py）</text>
+      <text x="790" y="172" fill="#334155" font-size="11.5">单次 API 调用批量翻译全部可见标题：</text>
+      <text x="790" y="189" fill="#334155" font-size="11.5">输入 [1] xxx 编号行 → 按 [n] 标记解析回填</text>
+      <text x="790" y="214" fill="#64748b" font-size="11">· scope 可选 hotlist / rss / standalone</text>
+      <text x="790" y="231" fill="#64748b" font-size="11">· 数量不匹配回退按行拆分</text>
+      <text x="790" y="248" fill="#64748b" font-size="11">· 失败回退原文（不阻断推送）</text>
+      <text x="790" y="271" fill="#94a3b8" font-size="10.5">发生在通知阶段，HTML 报告不受影响</text>
+
+      <line x1="370" y1="220" x2="400" y2="220" stroke="#6d28d9" stroke-width="1.6" marker-end="url(#a3)"/>
+      <line x1="740" y1="220" x2="770" y2="220" stroke="#6d28d9" stroke-width="1.6" marker-end="url(#a3)"/>
+
+      <!-- 容错与格式化 -->
+      <rect x="30" y="350" width="1080" height="180" rx="10" fill="#f8fafc" stroke="#94a3b8"/>
+      <text x="570" y="378" text-anchor="middle" fill="#334155" font-weight="700" font-size="13.5">可靠性与格式化底座</text>
+      <rect x="50" y="396" width="500" height="114" rx="8" fill="#fff" stroke="#cbd5e1"/>
+      <text x="300" y="420" text-anchor="middle" fill="#334155" font-weight="700">JSON 三重容错（analyzer.py:560 _parse_response）</text>
+      <text x="70" y="444" fill="#64748b" font-size="11.5">① json.loads 标准解析 → ② json_repair 本地修复</text>
+      <text x="70" y="464" fill="#64748b" font-size="11.5">→ ③ _retry_fix_json 让 AI 自修复（仅重试一次）</text>
+      <text x="70" y="488" fill="#94a3b8" font-size="11">提示词模板安全填充：占位符 str.replace，非 f-string 拼接</text>
+      <rect x="590" y="396" width="500" height="114" rx="8" fill="#fff" stroke="#cbd5e1"/>
+      <text x="840" y="420" text-anchor="middle" fill="#334155" font-weight="700">多渠道格式化（ai/formatter.py）</text>
+      <text x="610" y="444" fill="#64748b" font-size="11.5">AIAnalysisResult → 8 种渠道渲染器（飞书卡片 / 钉钉</text>
+      <text x="610" y="464" fill="#64748b" font-size="11.5">#### / Telegram HTML / 邮件 HTML / Slack mrkdwn / 纯文本…）</text>
+      <text x="610" y="488" fill="#94a3b8" font-size="11">7 步正则规范 AI 输出排版（序号换行 /【标签】块 / 空行）</text>
+    </svg>
+    </div>
+    <figcaption>图 6-1 · AI 处理管线：统一 LiteLLM 客户端之上的三个功能阶段 + 容错/格式化底座</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ -->
+<section id="s7">
+  <h2 class="sec">7. 数据存储架构</h2>
+
+  <figure class="figure">
+    <div class="svg-wrap">
+    <svg viewBox="0 0 1140 700" xmlns="http://www.w3.org/2000/svg" font-size="12">
+      <defs>
+        <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#059669"/>
+        </marker>
+      </defs>
+
+      <!-- Manager -->
+      <rect x="340" y="16" width="460" height="86" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+      <text x="570" y="44" text-anchor="middle" fill="#064e3b" font-weight="700" font-size="14">StorageManager（storage/manager.py · 统一门面）</text>
+      <text x="570" y="66" text-anchor="middle" fill="#64748b" font-size="11">backend=auto：GITHUB_ACTIONS=true 且 S3 四项配置齐全 → Remote</text>
+      <text x="570" y="84" text-anchor="middle" fill="#64748b" font-size="11">否则 Local；Remote 初始化失败自动回退 Local · 代理全部后端方法 · 保留天数清理</text>
+
+      <!-- 抽象层 -->
+      <rect x="340" y="128" width="460" height="64" rx="8" fill="#f0fdf4" stroke="#34d399"/>
+      <text x="570" y="152" text-anchor="middle" fill="#064e3b" font-weight="700">StorageBackend 抽象基类（base.py）+ SQLiteStorageMixin（sqlite_mixin.py）</text>
+      <text x="570" y="172" text-anchor="middle" fill="#64748b" font-size="11">数据模型 NewsItem/RSSItem/NewsData · 本地与远程共用的全部 SQL 逻辑</text>
+      <line x1="570" y1="102" x2="570" y2="128" stroke="#059669" stroke-width="1.8" marker-end="url(#a4)"/>
+
+      <!-- 双后端 -->
+      <rect x="60" y="226" width="480" height="170" rx="10" fill="#fff" stroke="#059669"/>
+      <text x="300" y="252" text-anchor="middle" fill="#064e3b" font-weight="700" font-size="13">LocalStorageBackend（local.py）</text>
+      <text x="84" y="278" fill="#334155" font-size="11.5">· SQLite 按日分库：output/news/{YYYY-MM-DD}.db、output/rss/{date}.db</text>
+      <text x="84" y="300" fill="#334155" font-size="11.5">· TXT 快照：output/txt/{date}/{HH:MM}.txt</text>
+      <text x="84" y="322" fill="#334155" font-size="11.5">· HTML 报告：output/html/{date}/ + latest/ + index</text>
+      <text x="84" y="344" fill="#334155" font-size="11.5">· 连接缓存 + 按文件名日期清理过期库</text>
+      <text x="84" y="370" fill="#94a3b8" font-size="10.5">适用于：本地运行 / Docker 挂载卷 / MCP 共享卷</text>
+
+      <rect x="600" y="226" width="480" height="170" rx="10" fill="#fff" stroke="#059669"/>
+      <text x="840" y="252" text-anchor="middle" fill="#064e3b" font-weight="700" font-size="13">RemoteStorageBackend（remote.py · boto3 S3 兼容）</text>
+      <text x="624" y="278" fill="#334155" font-size="11.5">· 数据流：下载当日 .db 到本地临时目录 → 本地 SQL 操作 → 上传回远程</text>
+      <text x="624" y="300" fill="#334155" font-size="11.5">· begin_batch / end_batch：脏库集合延迟到批末一次性上传</text>
+      <text x="624" y="322" fill="#334155" font-size="11.5">· 对象键 news/{date}.db、rss/{date}.db；腾讯云/阿里云自动 SigV2 签名</text>
+      <text x="624" y="344" fill="#334155" font-size="11.5">· pull_recent_days / list_remote_dates 支持远程→本地回拉</text>
+      <text x="624" y="370" fill="#94a3b8" font-size="10.5">适用于：GitHub Actions（runner 无持久盘）/ 跨机共享 / MCP 回拉分析</text>
+      <line x1="480" y1="192" x2="300" y2="226" stroke="#059669" stroke-width="1.6" marker-end="url(#a4)"/>
+      <line x1="660" y1="192" x2="840" y2="226" stroke="#059669" stroke-width="1.6" marker-end="url(#a4)"/>
+
+      <!-- 表结构 -->
+      <rect x="60" y="420" width="1020" height="260" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text x="570" y="446" text-anchor="middle" fill="#334155" font-weight="700" font-size="13">SQLite 表结构（schema.sql / rss_schema.sql / ai_filter_schema.sql）</text>
+
+      <rect x="80" y="462" width="320" height="200" rx="8" fill="#fff" stroke="#bae6fd"/>
+      <text x="240" y="484" text-anchor="middle" fill="#0c4a6e" font-weight="700">news 库（7 表）</text>
+      <text x="96" y="506" fill="#334155" font-size="10.5" class="mono">platforms            平台注册</text>
+      <text x="96" y="524" fill="#334155" font-size="10.5" class="mono">news_items           (url,platform) 部分唯一索引</text>
+      <text x="96" y="542" fill="#334155" font-size="10.5" class="mono">title_changes        标题变更历史</text>
+      <text x="96" y="560" fill="#334155" font-size="10.5" class="mono">rank_history         排名轨迹+脱榜rank=0</text>
+      <text x="96" y="578" fill="#334155" font-size="10.5" class="mono">crawl_records        每次抓取总量</text>
+      <text x="96" y="596" fill="#334155" font-size="10.5" class="mono">crawl_source_status  各平台成败</text>
+      <text x="96" y="614" fill="#334155" font-size="10.5" class="mono">period_executions    once 幂等(UNIQUE)</text>
+      <text x="96" y="640" fill="#94a3b8" font-size="10">写入链：normalize_url → upsert → 轨迹/脱榜 → 抓取记录</text>
+
+      <rect x="420" y="462" width="320" height="200" rx="8" fill="#fff" stroke="#bbf7d0"/>
+      <text x="580" y="484" text-anchor="middle" fill="#064e3b" font-weight="700">rss 库（5 表）</text>
+      <text x="436" y="506" fill="#334155" font-size="10.5" class="mono">rss_feeds            源注册+状态</text>
+      <text x="436" y="524" fill="#334155" font-size="10.5" class="mono">rss_items            UNIQUE(url,feed_id)</text>
+      <text x="436" y="542" fill="#334155" font-size="10.5" class="mono">rss_crawl_records    抓取批次</text>
+      <text x="436" y="560" fill="#334155" font-size="10.5" class="mono">rss_crawl_status     各源成败</text>
+      <text x="436" y="578" fill="#334155" font-size="10.5" class="mono">rss_push_records     推送/AI分析标记</text>
+      <text x="436" y="612" fill="#94a3b8" font-size="10">新鲜度过滤在推送阶段执行，</text>
+      <text x="436" y="628" fill="#94a3b8" font-size="10">全部文章均入库供 MCP 查询</text>
+
+      <rect x="760" y="462" width="300" height="200" rx="8" fill="#fff" stroke="#ddd6fe"/>
+      <text x="910" y="484" text-anchor="middle" fill="#4c1d95" font-weight="700">AI 筛选表（news 库内，3 表）</text>
+      <text x="776" y="506" fill="#334155" font-size="10.5" class="mono">ai_filter_tags          标签+版本+hash</text>
+      <text x="776" y="524" fill="#334155" font-size="10.5" class="mono">ai_filter_results       标签×新闻打分</text>
+      <text x="776" y="542" fill="#334155" font-size="10.5" class="mono">ai_filter_analyzed_news 已分析去重</text>
+      <text x="776" y="576" fill="#94a3b8" font-size="10">标签随兴趣文件演进</text>
+      <text x="776" y="592" fill="#94a3b8" font-size="10">（version / prompt_hash 追踪），</text>
+      <text x="776" y="608" fill="#94a3b8" font-size="10">已分析新闻不再重复消耗 token</text>
+    </svg>
+    </div>
+    <figcaption>图 7-1 · 存储架构：Manager 策略切换 + 抽象/Mixin 复用 + 双后端 + 三组 SQLite 表结构</figcaption>
+  </figure>
+
+  <div class="callout green">
+    <strong>为什么按日分库？</strong>单日数据量小（热榜 + RSS 千级），日库使清理（按文件名日期删除）、远程同步（按对象键上传当日库）、MCP 回拉（pull_recent_days）都退化为简单的文件级操作，避免引入常驻数据库服务。
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="s8">
+  <h2 class="sec">8. 通知分发系统</h2>
+  <p>通知子系统是一条<strong>五段式流水线</strong>（<code class="file">trendradar/notification/dispatcher.py:216 dispatch_all</code>），9 个渠道 × 每渠道最多 3 账号：</p>
+  <ol>
+    <li><strong>门控</strong>：notification.enabled 总开关 + 渠道已配置 + 有内容 + schedule.push + once_push 去重；<code>DISPLAY.REGIONS</code> 控制五区域（hotlist/rss/new_items/standalone/ai_analysis）是否出现，顺序由 <code>region_order</code> 决定。</li>
+    <li><strong>翻译前置</strong>：对深拷贝的报告数据收集全部可见标题 → <code>translate_batch()</code> 单次批量翻译 → 按 title_locations 回填；失败用原文。</li>
+    <li><strong>渲染</strong>：整条消息场景用 <code>renderer.py</code>；主流水线由 <code>report/formatter.py: format_title_for_platform</code> 逐行生成 8 种平台格式（来源标签、排名、时间、出现次数、🆕 前缀）；AI 区块由 <code>ai/formatter.py</code> 按渠道渲染。</li>
+    <li><strong>拆分</strong>（<code>splitter.py</code>）：字节级上限分批 —— 钉钉 20000 / 飞书 29000 / ntfy 3800 / 其他 4000 字节；<strong>词组标题 + 第一条新闻必须同批</strong>的原子性约束；自动生成统计头（总条数 + AI 分析数）与页脚。</li>
+    <li><strong>批头 + 发送</strong>（<code>batch.py</code> + <code>senders.py</code>）：每批追加"[第 i/N 批]"（批头空间按最坏 99/99 预留，多字节安全截断）→ <code>requests.post</code> 逐批发送，批间 sleep 3s；邮件走 smtplib（内置 11 家 SMTP 预设），HTML 报告文件作为 multipart 正文。</li>
+  </ol>
+  <table>
+    <tr><th>渠道</th><th>协议/格式</th><th>多账号</th></tr>
+    <tr><td>飞书 / 钉钉 / 企业微信 / Slack</td><td>Webhook，Markdown/卡片变体</td><td rowspan="6"><code>;</code> 分隔，配对项（token/chat_id 等）数量必须一致，≤3 账号/渠道</td></tr>
+    <tr><td>Telegram</td><td>Bot API，HTML</td></tr>
+    <tr><td>邮件</td><td>SMTP（gmail/qq/163 等预设），HTML 报告正文</td></tr>
+    <tr><td>ntfy / Bark</td><td>HTTP 推送，自托管支持</td></tr>
+    <tr><td>通用 Webhook</td><td>自定义 JSON 模板（{title}/{content} 占位），可接 Discord/Matrix/IFTTT</td></tr>
+    <tr><td>企业微信(个人应用)</td><td>text 模式可选</td></tr>
+  </table>
+  <p><strong>跨格式转换</strong>（<code>formatters.py</code>）：<code>strip_markdown</code>（先保护 URL 再剥离，供纯文本渠道）与 <code>convert_markdown_to_mrkdwn</code>（Slack 粗体/链接语法转换）。</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="s9">
+  <h2 class="sec">9. MCP Server 架构</h2>
+  <p>MCP Server（<code class="file">mcp_server/server.py</code>，FastMCP 2.0，实例名 <code>trendradar-news</code>）是数据消费侧的查询/分析/回推服务，供 AI 客户端自然语言驱动。</p>
+
+  <figure class="figure">
+    <div class="svg-wrap">
+    <svg viewBox="0 0 1140 520" xmlns="http://www.w3.org/2000/svg" font-size="12">
+      <defs>
+        <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#059669"/>
+        </marker>
+        <marker id="a5b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+        </marker>
+      </defs>
+
+      <!-- 客户端 -->
+      <rect x="30" y="60" width="170" height="120" rx="10" fill="#f0f9ff" stroke="#0284c7"/>
+      <text x="115" y="88" text-anchor="middle" fill="#0c4a6e" font-weight="700">AI 客户端</text>
+      <text x="115" y="112" text-anchor="middle" fill="#64748b" font-size="11">Cursor / Cline</text>
+      <text x="115" y="130" text-anchor="middle" fill="#64748b" font-size="11">Cherry Studio 等</text>
+      <text x="115" y="154" text-anchor="middle" fill="#94a3b8" font-size="10">自然语言 → 工具调用</text>
+
+      <!-- FastMCP -->
+      <rect x="250" y="30" width="230" height="330" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+      <text x="365" y="58" text-anchor="middle" fill="#064e3b" font-weight="700" font-size="14">FastMCP 2.0</text>
+      <rect x="266" y="76" width="198" height="54" rx="6" fill="#fff" stroke="#34d399"/>
+      <text x="365" y="98" text-anchor="middle" fill="#064e3b" font-weight="600">传输层</text>
+      <text x="365" y="116" text-anchor="middle" fill="#64748b" font-size="10.5">stdio（子进程拉起）/ HTTP :3333</text>
+      <rect x="266" y="142" width="198" height="64" rx="6" fill="#fff" stroke="#34d399"/>
+      <text x="365" y="164" text-anchor="middle" fill="#064e3b" font-weight="600">27 个 @mcp.tool</text>
+      <text x="365" y="182" text-anchor="middle" fill="#64748b" font-size="10.5">async 薄壳 → asyncio.to_thread</text>
+      <text x="365" y="198" text-anchor="middle" fill="#64748b" font-size="10.5">包同步工具类，返回 JSON</text>
+      <rect x="266" y="218" width="198" height="50" rx="6" fill="#fff" stroke="#34d399"/>
+      <text x="365" y="240" text-anchor="middle" fill="#064e3b" font-weight="600">4 个 MCP Resource</text>
+      <text x="365" y="258" text-anchor="middle" fill="#64748b" font-size="10.5">平台/RSS/关键词/可用日期</text>
+      <rect x="266" y="280" width="198" height="64" rx="6" fill="#d1fae5" stroke="#059669"/>
+      <text x="365" y="302" text-anchor="middle" fill="#064e3b" font-weight="600">设计约定</text>
+      <text x="365" y="319" text-anchor="middle" fill="#64748b" font-size="10.5">resolve_date_range 建议优先调用</text>
+      <text x="365" y="335" text-anchor="middle" fill="#64748b" font-size="10.5">（服务端统一日期解析）</text>
+      <line x1="200" y1="120" x2="250" y2="120" stroke="#059669" stroke-width="1.8" marker-end="url(#a5)" marker-start="url(#a5)"/>
+
+      <!-- tools 层 -->
+      <rect x="530" y="30" width="280" height="330" rx="10" fill="#f0fdf4" stroke="#34d399"/>
+      <text x="670" y="56" text-anchor="middle" fill="#064e3b" font-weight="700">tools/（8 个工具类，懒初始化单例）</text>
+      <g font-size="10.5" fill="#334155">
+        <rect x="546" y="70" width="248" height="30" rx="5" fill="#fff" stroke="#a7f3d0"/>
+        <text x="556" y="89">DataQueryTools — 最新/按日期/历史查询</text>
+        <rect x="546" y="106" width="248" height="30" rx="5" fill="#fff" stroke="#a7f3d0"/>
+        <text x="556" y="125">SearchTools — 关键词/模糊/实体/相关新闻</text>
+        <rect x="546" y="142" width="248" height="30" rx="5" fill="#fff" stroke="#a7f3d0"/>
+        <text x="556" y="161">AnalyticsTools — 趋势/洞察/情感/聚合/对比</text>
+        <rect x="546" y="178" width="248" height="30" rx="5" fill="#fff" stroke="#a7f3d0"/>
+        <text x="556" y="197">ConfigManagementTools — 配置查询</text>
+        <rect x="546" y="214" width="248" height="30" rx="5" fill="#fff" stroke="#a7f3d0"/>
+        <text x="556" y="233">SystemManagementTools — 状态/版本/触发爬取</text>
+        <rect x="546" y="250" width="248" height="30" rx="5" fill="#fff" stroke="#a7f3d0"/>
+        <text x="556" y="269">StorageSyncTools — S3 同步/日期清单</text>
+        <rect x="546" y="286" width="248" height="30" rx="5" fill="#fff" stroke="#a7f3d0"/>
+        <text x="556" y="305">ArticleReaderTools — Jina Reader 读正文</text>
+        <rect x="546" y="322" width="248" height="30" rx="5" fill="#fff" stroke="#a7f3d0"/>
+        <text x="556" y="341">NotificationTools — 渠道检测/格式指南/发送</text>
+      </g>
+      <line x1="480" y1="195" x2="530" y2="195" stroke="#059669" stroke-width="1.6" marker-end="url(#a5)"/>
+
+      <!-- services 层 -->
+      <rect x="860" y="30" width="250" height="330" rx="10" fill="#f8fafc" stroke="#94a3b8"/>
+      <text x="985" y="56" text-anchor="middle" fill="#334155" font-weight="700">services/ + utils/</text>
+      <g font-size="10.5" fill="#334155">
+        <rect x="876" y="70" width="218" height="44" rx="5" fill="#fff" stroke="#cbd5e1"/>
+        <text x="985" y="88" text-anchor="middle" font-weight="600">DataService</text>
+        <text x="985" y="105" text-anchor="middle" fill="#64748b">统一数据访问门面+停用词</text>
+        <rect x="876" y="124" width="218" height="44" rx="5" fill="#fff" stroke="#cbd5e1"/>
+        <text x="985" y="142" text-anchor="middle" font-weight="600">ParserService</text>
+        <text x="985" y="159" text-anchor="middle" fill="#64748b">SQLite/yaml 解析+mtime 缓存</text>
+        <rect x="876" y="178" width="218" height="44" rx="5" fill="#fff" stroke="#cbd5e1"/>
+        <text x="985" y="196" text-anchor="middle" font-weight="600">CacheService</text>
+        <text x="985" y="213" text-anchor="middle" fill="#64748b">TTL 900s 线程安全内存缓存</text>
+        <rect x="876" y="232" width="218" height="56" rx="5" fill="#fff" stroke="#cbd5e1"/>
+        <text x="985" y="250" text-anchor="middle" font-weight="600">validators / errors</text>
+        <text x="985" y="267" text-anchor="middle" fill="#64748b">容错参数解析 · MCPError</text>
+        <text x="985" y="282" text-anchor="middle" fill="#64748b">体系（code+suggestion）</text>
+        <rect x="876" y="298" width="218" height="44" rx="5" fill="#fff" stroke="#cbd5e1"/>
+        <text x="985" y="316" text-anchor="middle" font-weight="600">date_parser</text>
+        <text x="985" y="333" text-anchor="middle" fill="#64748b">中英文自然语言日期解析</text>
+      </g>
+      <line x1="810" y1="195" x2="860" y2="195" stroke="#475569" stroke-width="1.5" marker-end="url(#a5b)"/>
+
+      <!-- 底部：与核心的关系 -->
+      <rect x="30" y="390" width="1080" height="110" rx="10" fill="#eff6ff" stroke="#2563eb"/>
+      <text x="570" y="418" text-anchor="middle" fill="#1e40af" font-weight="700" font-size="13">与核心引擎的关系：进程内直连（同容器同 Python 进程，无 subprocess/HTTP 边界）</text>
+      <text x="570" y="444" text-anchor="middle" fill="#64748b" font-size="11.5">trigger_crawl 直接 import DataFetcher/LocalStorageBackend 在 MCP 进程内完整跑一次爬取落库</text>
+      <text x="570" y="466" text-anchor="middle" fill="#64748b" font-size="11.5">通知工具复用 notification/batch+formatters+senders · 权重计算复用 core/analyzer · 关注词匹配复用 core/frequency</text>
+      <text x="570" y="488" text-anchor="middle" fill="#94a3b8" font-size="11">数据获取两条路：共享挂载 output/ 卷（Docker）或 sync_from_remote 从 S3 回拉</text>
+    </svg>
+    </div>
+    <figcaption>图 9-1 · MCP Server 分层：传输 → 工具 → 服务 → 复用核心包</figcaption>
+  </figure>
+
+  <h3>27 个工具按职能分组</h3>
+  <table>
+    <tr><th style="width:110px">分组</th><th>工具（功能摘要）</th></tr>
+    <tr><td><span class="tag green">日期基座</span></td><td><code>resolve_date_range</code>（自然语言→精确区间，设计为最先调用）</td></tr>
+    <tr><td><span class="tag blue">数据查询</span></td><td><code>get_latest_news</code> · <code>get_news_by_date</code> · <code>get_latest_rss</code> · <code>search_rss</code> · <code>get_rss_feeds_status</code> · <code>get_trending_topics</code>（预设词/自动高频词）</td></tr>
+    <tr><td><span class="tag purple">分析</span></td><td><code>analyze_topic_trend</code>（趋势/生命周期/爆火/预测）· <code>analyze_data_insights</code>（平台对比/活跃度/共现）· <code>analyze_sentiment</code> · <code>find_related_news</code> · <code>aggregate_news</code> · <code>compare_periods</code> · <code>search_news</code>（keyword/fuzzy/entity）· <code>generate_summary_report</code></td></tr>
+    <tr><td><span class="tag orange">内容增强</span></td><td><code>read_article</code> · <code>read_articles_batch</code>（Jina Reader 转 Markdown，5s 限速）</td></tr>
+    <tr><td><span class="tag gray">系统/存储</span></td><td><code>get_current_config</code> · <code>get_system_status</code> · <code>check_version</code> · <code>trigger_crawl</code> · <code>sync_from_remote</code> · <code>get_storage_status</code> · <code>list_available_dates</code></td></tr>
+    <tr><td><span class="tag blue">通知回推</span></td><td><code>get_channel_format_guide</code> · <code>get_notification_channels</code> · <code>send_notification</code>（markdown 自动转各渠道格式，超长自动分批——AI 生成内容可直推全渠道）</td></tr>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<section id="s10">
+  <h2 class="sec">10. 部署架构</h2>
+  <p>同一引擎支持三种部署路线，对应不同用户群：</p>
+
+  <figure class="figure">
+    <div class="svg-wrap">
+    <svg viewBox="0 0 1140 640" xmlns="http://www.w3.org/2000/svg" font-size="12">
+      <defs>
+        <marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+        </marker>
+      </defs>
+
+      <!-- 模式A：GitHub Actions -->
+      <rect x="30" y="20" width="350" height="280" rx="10" fill="#fff" stroke="#94a3b8"/>
+      <rect x="30" y="20" width="350" height="40" rx="10" fill="#f1f5f9"/>
+      <text x="205" y="46" text-anchor="middle" fill="#334155" font-weight="700">路线 A · GitHub Actions（无服务器）</text>
+      <rect x="50" y="76" width="310" height="40" rx="6" fill="#eff6ff" stroke="#93c5fd"/>
+      <text x="205" y="101" text-anchor="middle" fill="#1e40af">crawler.yml · cron 33 * * * *（每小时）</text>
+      <rect x="50" y="128" width="310" height="40" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text x="205" y="153" text-anchor="middle" fill="#334155">ubuntu runner：pip install → python -m trendradar</text>
+      <rect x="50" y="180" width="150" height="40" rx="6" fill="#fef9c3" stroke="#fde047"/>
+      <text x="125" y="205" text-anchor="middle" fill="#713f12">Secrets 注入配置</text>
+      <rect x="210" y="180" width="150" height="40" rx="6" fill="#ecfdf5" stroke="#6ee7b7"/>
+      <text x="285" y="205" text-anchor="middle" fill="#064e3b">推送 / S3（无本地留存）</text>
+      <line x1="205" y1="116" x2="205" y2="128" stroke="#475569" stroke-width="1.5" marker-end="url(#a6)"/>
+      <line x1="125" y1="220" x2="125" y2="236" stroke="#475569" stroke-width="1.3" marker-end="url(#a6)"/>
+      <line x1="285" y1="220" x2="285" y2="236" stroke="#475569" stroke-width="1.3" marker-end="url(#a6)"/>
+      <rect x="50" y="240" width="310" height="44" rx="6" fill="#fef2f2" stroke="#fca5a5"/>
+      <text x="205" y="259" text-anchor="middle" fill="#991b1b" font-size="11">试用机制：距首次 run &gt; 7 天自动 disable workflow</text>
+      <text x="205" y="275" text-anchor="middle" fill="#94a3b8" font-size="10.5">clean-crawler.yml「签到」清空历史 run 重置倒计时</text>
+
+      <!-- 模式B：Docker -->
+      <rect x="410" y="20" width="700" height="600" rx="10" fill="#fff" stroke="#0284c7"/>
+      <rect x="410" y="20" width="700" height="40" rx="10" fill="#e0f2fe"/>
+      <text x="760" y="46" text-anchor="middle" fill="#0c4a6e" font-weight="700">路线 B · Docker 双容器常驻（服务器 / NAS）</text>
+
+      <!-- 宿主机边界 -->
+      <rect x="430" y="76" width="660" height="460" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="6 4"/>
+      <text x="760" y="98" text-anchor="middle" fill="#64748b" font-size="11">宿主机（所有端口仅绑定 127.0.0.1）</text>
+
+      <!-- 容器1 -->
+      <rect x="450" y="112" width="310" height="240" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.8"/>
+      <text x="605" y="136" text-anchor="middle" fill="#1e40af" font-weight="700">容器 trendradar（爬虫引擎）</text>
+      <text x="605" y="153" text-anchor="middle" fill="#64748b" font-size="10.5">wantcat/trendradar · python:3.12-slim + supercronic</text>
+      <rect x="466" y="164" width="278" height="52" rx="5" fill="#fff" stroke="#93c5fd"/>
+      <text x="605" y="184" text-anchor="middle" fill="#334155" font-size="10.5">entrypoint.sh：RUN_MODE=cron</text>
+      <text x="605" y="200" text-anchor="middle" fill="#64748b" font-size="10">supercronic CRON_SCHEDULE（默认 */30）→ python -m trendradar</text>
+      <rect x="466" y="224" width="278" height="52" rx="5" fill="#fff" stroke="#93c5fd"/>
+      <text x="605" y="244" text-anchor="middle" fill="#334155" font-size="10.5">可选 Web 服务器（manage.py）</text>
+      <text x="605" y="260" text-anchor="middle" fill="#64748b" font-size="10">服务 output/ 静态报告 + watchdog 自愈</text>
+      <text x="605" y="292" text-anchor="middle" fill="#94a3b8" font-size="10.5">env：TZ / WEBSERVER_* / 渠道 / AI / S3</text>
+      <text x="605" y="310" text-anchor="middle" fill="#94a3b8" font-size="10.5">IMMEDIATE_RUN 启动即跑一次</text>
+      <text x="605" y="336" text-anchor="middle" fill="#1e40af" font-weight="600">端口 127.0.0.1:8080（可选）</text>
+
+      <!-- 容器2 -->
+      <rect x="790" y="112" width="280" height="240" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.8"/>
+      <text x="930" y="136" text-anchor="middle" fill="#064e3b" font-weight="700">容器 trendradar-mcp</text>
+      <text x="930" y="153" text-anchor="middle" fill="#64748b" font-size="10.5">wantcat/trendradar-mcp · 内含 mcp_server + trendradar</text>
+      <rect x="806" y="164" width="248" height="52" rx="5" fill="#fff" stroke="#6ee7b7"/>
+      <text x="930" y="184" text-anchor="middle" fill="#334155" font-size="10.5">python -m mcp_server.server</text>
+      <text x="930" y="200" text-anchor="middle" fill="#64748b" font-size="10">--transport http --port 3333</text>
+      <text x="930" y="292" text-anchor="middle" fill="#94a3b8" font-size="10.5">仅 TZ 环境变量</text>
+      <text x="930" y="336" text-anchor="middle" fill="#065f46" font-weight="600">端口 127.0.0.1:3333</text>
+
+      <!-- 共享卷 -->
+      <rect x="450" y="376" width="620" height="64" rx="8" fill="#fef9c3" stroke="#fde047"/>
+      <text x="760" y="400" text-anchor="middle" fill="#713f12" font-weight="700">共享绑定卷（两容器数据交换通道）</text>
+      <text x="760" y="422" text-anchor="middle" fill="#64748b" font-size="10.5">../config → /app/config（只读）·  ../output → /app/output（读写，SQLite 日库 + HTML 报告）</text>
+      <line x1="605" y1="352" x2="605" y2="376" stroke="#d97706" stroke-width="1.6" marker-end="url(#a6)"/>
+      <line x1="930" y1="352" x2="930" y2="376" stroke="#d97706" stroke-width="1.6" marker-end="url(#a6)"/>
+
+      <text x="760" y="468" text-anchor="middle" fill="#94a3b8" font-size="10.5">docker-compose-build.yml 同构，image: 换为本地 build:（context=仓库根）</text>
+      <text x="760" y="500" text-anchor="middle" fill="#334155" font-size="11">CI：docker.yml 在 tag v*（引擎）/ mcp-v*（MCP）时 Buildx 多架构</text>
+      <text x="760" y="518" text-anchor="middle" fill="#64748b" font-size="10.5">linux/amd64 + arm64 → Docker Hub（semver / major.minor / latest 三类 tag）</text>
+
+      <!-- 模式C：本地 -->
+      <rect x="30" y="330" width="350" height="290" rx="10" fill="#fff" stroke="#16a34a"/>
+      <rect x="30" y="330" width="350" height="40" rx="10" fill="#dcfce7"/>
+      <text x="205" y="356" text-anchor="middle" fill="#14532d" font-weight="700">路线 C · 本地 / 自建 cron</text>
+      <rect x="50" y="386" width="310" height="46" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
+      <text x="205" y="406" text-anchor="middle" fill="#14532d" font-size="11">uv / pip install · python -m trendradar</text>
+      <text x="205" y="422" text-anchor="middle" fill="#64748b" font-size="10.5">setup-mac.sh / setup-windows.bat 一键脚本</text>
+      <rect x="50" y="442" width="310" height="46" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
+      <text x="205" y="462" text-anchor="middle" fill="#14532d" font-size="11">本地 output/ 目录直读 · 自动打开浏览器看报告</text>
+      <text x="205" y="478" text-anchor="middle" fill="#64748b" font-size="10.5">start-http.sh 起静态服务浏览历史报告</text>
+      <rect x="50" y="498" width="310" height="56" rx="6" fill="#fff" stroke="#bbf7d0"/>
+      <text x="205" y="520" text-anchor="middle" fill="#14532d" font-size="11">MCP 本地模式：trendradar-mcp（stdio）</text>
+      <text x="205" y="536" text-anchor="middle" fill="#64748b" font-size="10.5">AI 客户端直接拉起子进程接入</text>
+      <text x="205" y="570" text-anchor="middle" fill="#94a3b8" font-size="10.5">可视化配置编辑器：docs/index.html（GitHub Pages）</text>
+      <text x="205" y="586" text-anchor="middle" fill="#94a3b8" font-size="10.5">100% 保留 YAML 注释的在线编辑</text>
+    </svg>
+    </div>
+    <figcaption>图 10-1 · 三种部署路线：GitHub Actions（免服务器）/ Docker 双容器（常驻）/ 本地（手动或自建 cron）</figcaption>
+  </figure>
+
+  <table>
+    <tr><th>路线</th><th>适用人群</th><th>定时机制</th><th>数据落点</th></tr>
+    <tr><td>A · GitHub Actions</td><td>无服务器用户（7 天试用签到制，长期建议转 Docker）</td><td>workflow cron（每小时）</td><td>runner 不留存 → 推送渠道 + 远程 S3</td></tr>
+    <tr><td>B · Docker</td><td>服务器 / NAS 常驻用户</td><td>supercronic（默认每 30 分钟）</td><td>共享 output 卷（本地后端）</td></tr>
+    <tr><td>C · 本地</td><td>开发 / 轻量使用</td><td>手动 / 系统 cron</td><td>本地 output/ 目录</td></tr>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<section id="s11">
+  <h2 class="sec">11. 关键设计决策</h2>
+  <table>
+    <tr><th style="width:230px">决策</th><th>动机与回答"为什么"</th></tr>
+    <tr>
+      <td><strong>无状态单次执行</strong><br><span style="color:#94a3b8;font-size:12px">程序内无循环，定时全部交给外部 cron</span></td>
+      <td>同一份代码适配手动 / Actions / supercronic 三种环境；进程崩溃即退，无需守护逻辑；调度语义收敛到声明式 timeline.yaml 而非散落各处的 sleep</td>
+    </tr>
+    <tr>
+      <td><strong>AppContext 组合根 + Facade</strong><br><span style="color:#94a3b8;font-size:12px">context.py，非全局单例</span></td>
+      <td>消除全局 CONFIG 可变状态；NewsAnalyzer 只依赖一个上下文对象，配置注入（时区/权重/区域顺序）在装配时完成，可测试性优先</td>
+    </tr>
+    <tr>
+      <td><strong>SQLite 按日分库</strong></td>
+      <td>清理 / 远程同步 / MCP 回拉全部退化为文件级操作；单日数据量小，无需常驻数据库服务；远程后端只需"下载-修改-上传"一个文件</td>
+    </tr>
+    <tr>
+      <td><strong>URL 标准化去重</strong><br><span style="color:#94a3b8;font-size:12px">utils/url.py normalize_url</span></td>
+      <td>剔除 utm_* 追踪参数与平台动态参数（如微博 band_rank）后按 (url, platform) 建部分唯一索引——同一新闻跨批次/跨参数变体可靠合并，排名轨迹才可累计</td>
+    </tr>
+    <tr>
+      <td><strong>两条筛选路径统一收敛</strong></td>
+      <td>keyword 词频与 AI 兴趣标签最终都产出 <code>stats=[{word,count,titles}]</code> 同一形态，下游分析/报告/通知零感知差异；AI 失败自动回退关键词，可用性优先</td>
+    </tr>
+    <tr>
+      <td><strong>AI 结果三重 JSON 容错</strong></td>
+      <td>LLM 输出不可靠是常态：标准解析 → json_repair 本地修 → AI 自修一次，层级递进控制成本</td>
+    </tr>
+    <tr>
+      <td><strong>MCP 进程内直连核心包</strong></td>
+      <td>避免为 MCP 单独维护一套平行实现；权重公式、词频匹配、通知发送与引擎严格一致；隔离边界放在部署层（独立容器 + 共享卷）而非代码层</td>
+    </tr>
+    <tr>
+      <td><strong>存储级幂等</strong><br><span style="color:#94a3b8;font-size:12px">period_executions / ai_filter_analyzed_news</span></td>
+      <td>once 推送去重、已分析新闻去重都落在 SQLite 唯一约束上，进程重启 / 重复执行不产生副作用，也不重复消耗 token</td>
+    </tr>
+    <tr>
+      <td><strong>字节级消息分批</strong></td>
+      <td>各渠道消息上限差异大（钉钉 20KB vs ntfy ~3.7KB），拆分器按渠道上限 + 批头预留 + 多字节安全截断，保证"词组标题与首条新闻同批"的可读性原子约束</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<section id="s12">
+  <h2 class="sec">12. 技术栈清单</h2>
+  <table>
+    <tr><th style="width:180px">依赖</th><th style="width:200px">用途</th><th>使用位置</th></tr>
+    <tr><td>requests</td><td>HTTP 客户端</td><td>热榜/RSS 抓取、全部通知渠道发送、Jina Reader</td></tr>
+    <tr><td>feedparser</td><td>RSS 2.0 / Atom 解析</td><td>crawler/rss/parser.py（JSON Feed 1.1 为自实现）</td></tr>
+    <tr><td>litellm</td><td>LLM 统一接口（100+ Provider）</td><td>ai/client.py，筛选/分析/翻译三功能共享</td></tr>
+    <tr><td>json-repair</td><td>AI JSON 输出修复</td><td>ai/analyzer.py 容错链第二层</td></tr>
+    <tr><td>fastmcp（2.x）</td><td>MCP Server 框架</td><td>mcp_server/server.py（stdio / HTTP 双传输）</td></tr>
+    <tr><td>boto3</td><td>S3 兼容对象存储 SDK</td><td>storage/remote.py（R2/OSS/COS/MinIO）</td></tr>
+    <tr><td>PyYAML / pytz</td><td>配置解析 / 时区</td><td>core/loader.py · utils/time.py</td></tr>
+    <tr><td>tenacity</td><td>重试</td><td>依赖清单声明（抓取侧重试为手写退避实现）</td></tr>
+    <tr><td>Python ≥3.10</td><td>运行时（Docker 镜像 3.12-slim）</td><td>—</td></tr>
+  </table>
+  <h3>代码量概览</h3>
+  <ul>
+    <li>核心包 <code>trendradar/</code>：约 2.5 万行（最大文件 <code>__main__.py</code> 2272 行、<code>context.py</code> 1115 行）</li>
+    <li>MCP 服务 <code>mcp_server/</code>：server.py 1257 行 + 8 工具类（analytics.py 最大 2639 行）+ 3 服务 + 3 工具库</li>
+    <li>配置资产：config.yaml（v2.2.0）、timeline.yaml（v1.2.0）、frequency_words.txt（v1.1.0）、ai_interests.txt、5 个 AI 提示词模板</li>
+  </ul>
+</section>
+
+</div>
+<footer>TrendRadar 系统架构文档 · 基于源码分析生成（master@512147c）· 引擎 v6.5.0 / MCP v4.0.0</footer>
+</body>
+</html>
