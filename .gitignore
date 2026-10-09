@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.hvigor/
+
+# 平台运行时数据（platform.db / 任务投影与日志）
+data/
+
+# 前端
+frontend/node_modules/
+frontend/dist/
+
+# 输出产物（引擎生成）
+output/
+!output/.gitkeep
+
+# MCP API Key（平台生成，绝不入库）
+config/mcp_auth.json
