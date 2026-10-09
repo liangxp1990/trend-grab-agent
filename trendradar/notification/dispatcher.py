@@ -318,6 +318,20 @@ class NotificationDispatcher:
         ):
             results["email"] = self._send_email(report_type, html_file_path)
 
+        # 平台化适配：将渠道级送达结果写入约定路径（webapp 执行器读取落库）。
+        # 失败静默——CLI 模式下无消费方，不影响原有流程。
+        try:
+            import json as _json
+            from pathlib import Path as _Path
+
+            _meta_dir = _Path("output/meta")
+            _meta_dir.mkdir(parents=True, exist_ok=True)
+            (_meta_dir / "notify_results.json").write_text(
+                _json.dumps({"channels": results}, ensure_ascii=False), encoding="utf-8"
+            )
+        except Exception:  # noqa: BLE001 结果落盘为增强能力，不阻断通知主流程
+            pass
+
         return results
 
     def _send_to_multi_accounts(

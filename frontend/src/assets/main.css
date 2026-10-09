@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* 与 .pen 设计变量对齐的主题令牌（Tailwind v4 主题层） */
+@theme {
+  --color-sidebar: #0f172a;
+  --color-sidebar-active: #1e293b;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html, body, #app {
+  height: 100%;
+}

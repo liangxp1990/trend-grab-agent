@@ -1,0 +1,7 @@
+# TrendRadar 管理平台（webapp）依赖
+# 引擎本体依赖见 requirements.txt；Docker 镜像内两者合并安装
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+sqlalchemy>=2.0,<3.0
+pyjwt>=2.8,<3.0
+apscheduler>=3.10,<4.0

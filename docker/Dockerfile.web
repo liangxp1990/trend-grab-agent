@@ -1,0 +1,48 @@
+# TrendRadar 管理平台镜像（多阶段：前端构建 → 后端运行时）
+# 构建：docker build -f docker/Dockerfile.web -t trendradar-web .
+# 运行：见 docker/docker-compose-web.yml
+
+# ---------- 阶段 1：前端构建 ----------
+FROM node:20-alpine AS frontend-builder
+WORKDIR /build
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install --no-fund --no-audit
+COPY frontend/ ./
+RUN npm run build
+
+# ---------- 阶段 2：后端运行时 ----------
+FROM python:3.12-slim-bookworm
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    CONFIG_PATH=/app/config/config.yaml
+
+WORKDIR /app
+
+# 依赖层（利用缓存）
+COPY requirements.txt requirements-web.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-web.txt
+
+# 引擎 + 平台代码（pip 安装入口脚本）
+COPY pyproject.toml ./
+COPY trendradar ./trendradar
+COPY webapp ./webapp
+COPY mcp_server ./mcp_server
+COPY version version_mcp version_configs ./
+RUN pip install --no-cache-dir --no-deps .
+
+# 前端构建产物
+COPY --from=frontend-builder /build/dist ./frontend/dist
+
+# 非 root 运行（规划安全缓解：投影敏感文件权限）
+RUN useradd -m -u 1000 appuser \
+    && mkdir -p /app/data \
+    && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
+    CMD python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/api/v1/health', timeout=3)"
+
+CMD ["python", "-m", "uvicorn", "webapp.main:app", "--host", "0.0.0.0", "--port", "8080"]

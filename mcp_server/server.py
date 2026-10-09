@@ -1114,6 +1114,69 @@ async def send_notification(
 
 # ==================== 启动入口 ====================
 
+def _resolve_mcp_api_key(project_root: Optional[str] = None) -> str:
+    """解析 MCP HTTP 鉴权 Key。
+
+    优先级：MCP_API_KEY 环境变量 > 共享卷 config/mcp_auth.json（管理平台生成）。
+
+    Args:
+        project_root: 项目根目录（用于定位 config/ 目录）。
+
+    Returns:
+        API Key 字符串；未配置返回空串（不启用鉴权）。
+    """
+    import json
+    import os
+    from pathlib import Path
+
+    key = os.environ.get("MCP_API_KEY", "").strip()
+    if key:
+        return key
+    candidates = []
+    if project_root:
+        candidates.append(Path(project_root) / "config" / "mcp_auth.json")
+    candidates.append(Path.cwd() / "config" / "mcp_auth.json")
+    for path in candidates:
+        try:
+            if path.is_file():
+                data = json.loads(path.read_text(encoding="utf-8"))
+                return str(data.get("api_key", "")).strip()
+        except (OSError, ValueError):
+            continue
+    return ""
+
+
+class _ApiKeyMiddleware:
+    """纯 ASGI 中间件：校验 Authorization Bearer 或 X-API-Key 请求头。"""
+
+    def __init__(self, app, api_key: str):
+        self.app = app
+        self.api_key = api_key
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or not self._authorized(scope):
+            if scope["type"] == "http":
+                await self._reject(send)
+                return
+            await self.app(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+    def _authorized(self, scope) -> bool:
+        headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+        auth = headers.get("authorization", "")
+        provided = auth[7:].strip() if auth.lower().startswith("bearer ") else headers.get("x-api-key", "").strip()
+        return bool(provided) and provided == self.api_key
+
+    @staticmethod
+    async def _reject(send) -> None:
+        import json as _json
+
+        body = _json.dumps({"detail": "无效的 MCP API Key"}).encode()
+        await send({"type": "http.response.start", "status": 401, "headers": [(b"content-type", b"application/json")]})
+        await send({"type": "http.response.body", "body": body})
+
+
 def run_server(
     project_root: Optional[str] = None,
     transport: str = 'stdio',
@@ -1205,12 +1268,24 @@ def run_server(
         mcp.run(transport='stdio')
     elif transport == 'http':
         # HTTP 模式（生产推荐）
-        mcp.run(
-            transport='http',
-            host=host,
-            port=port,
-            path='/mcp'  # HTTP 端点路径
-        )
+        # API Key 鉴权：MCP_API_KEY 环境变量优先，其次读共享卷
+        # config/mcp_auth.json（由管理平台生成维护）；均未配置时不启用（兼容模式）
+        api_key = _resolve_mcp_api_key(project_root)
+        if api_key:
+            print(f"  API Key 鉴权: 已启用（Authorization: Bearer 或 X-API-Key）")
+            import uvicorn
+
+            app = mcp.http_app(path='/mcp')
+            secured = _ApiKeyMiddleware(app, api_key)
+            uvicorn.run(secured, host=host, port=port, log_level='info')
+        else:
+            print("  API Key 鉴权: 未配置（兼容模式，任何客户端均可访问）")
+            mcp.run(
+                transport='http',
+                host=host,
+                port=port,
+                path='/mcp'  # HTTP 端点路径
+            )
     else:
         raise ValueError(f"不支持的传输模式: {transport}")
 

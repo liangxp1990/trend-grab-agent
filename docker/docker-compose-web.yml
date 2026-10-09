@@ -1,0 +1,87 @@
+# TrendRadar 管理平台部署（web + mcp 双容器）
+#
+# 快速开始：
+#   cd docker && docker compose -f docker-compose-web.yml --env-file .env up -d
+#   浏览器访问 http://127.0.0.1:8080 （默认账号 admin / WEB_ADMIN_PASSWORD，默认 trendradar）
+#
+# 与原 docker-compose.yml 的关系：
+#   本文件用 web 平台内置调度取代 supercronic 爬虫容器。
+#   ⚠️ 请勿与原 trendradar（supercronic）容器同时启用，否则双调度器
+#      会对同一 SQLite 日库并发写入。二选一：
+#      - 轻量纯推送（无管理界面）：用原 docker-compose.yml
+#      - 平台化管理：用本文件
+
+services:
+  trendradar-web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web
+    image: trendradar-web:latest
+    container_name: trendradar-web
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"
+
+    volumes:
+      # config 需要 rw：平台保存配置后投影器双写共享卷，MCP/CLI 同步读到最新
+      - ../config:/app/config
+      - ../output:/app/output
+      # 平台库 + 任务投影/日志（不与其他容器共享）
+      - web-data:/app/data
+
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      # 平台配置
+      - WEB_SECRET_KEY=${WEB_SECRET_KEY:-}
+      - WEB_ADMIN_PASSWORD=${WEB_ADMIN_PASSWORD:-trendradar}
+      - WEB_CRON=${WEB_CRON:-*/30 * * * *}
+      - WEB_TOKEN_EXPIRE_H=${WEB_TOKEN_EXPIRE_H:-24}
+      # 通知渠道（供引擎子进程使用，与原容器一致的 env 注入）
+      - FEISHU_WEBHOOK_URL=${FEISHU_WEBHOOK_URL:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - DINGTALK_WEBHOOK_URL=${DINGTALK_WEBHOOK_URL:-}
+      - WEWORK_WEBHOOK_URL=${WEWORK_WEBHOOK_URL:-}
+      - WEWORK_MSG_TYPE=${WEWORK_MSG_TYPE:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD:-}
+      - EMAIL_TO=${EMAIL_TO:-}
+      - EMAIL_SMTP_SERVER=${EMAIL_SMTP_SERVER:-}
+      - EMAIL_SMTP_PORT=${EMAIL_SMTP_PORT:-}
+      - NTFY_SERVER_URL=${NTFY_SERVER_URL:-https://ntfy.sh}
+      - NTFY_TOPIC=${NTFY_TOPIC:-}
+      - NTFY_TOKEN=${NTFY_TOKEN:-}
+      - BARK_URL=${BARK_URL:-}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - GENERIC_WEBHOOK_URL=${GENERIC_WEBHOOK_URL:-}
+      - GENERIC_WEBHOOK_TEMPLATE=${GENERIC_WEBHOOK_TEMPLATE:-}
+      # AI 配置
+      - AI_ANALYSIS_ENABLED=${AI_ANALYSIS_ENABLED:-}
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_MODEL=${AI_MODEL:-}
+      - AI_API_BASE=${AI_API_BASE:-}
+      # 远程存储
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
+      - S3_REGION=${S3_REGION:-}
+
+  trendradar-mcp:
+    image: wantcat/trendradar-mcp:latest
+    container_name: trendradar-mcp
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:3333:3333"
+
+    volumes:
+      - ../config:/app/config:ro
+      - ../output:/app/output
+
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+
+volumes:
+  web-data:
